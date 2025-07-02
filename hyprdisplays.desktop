@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=HyprDisplays
+GenericName=Display Management
+Comment=Hyprland display management utility
+Exec=hyprdisplays
+Icon=hyprdisplays
+Terminal=false
+Categories=System;Settings;HardwareSettings;Qt;KDE;
+Keywords=display;monitor;hyprland;wayland;settings;
+StartupNotify=true
+StartupWMClass=hyprdisplays
+MimeType= 
