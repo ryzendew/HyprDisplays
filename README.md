@@ -1,5 +1,8 @@
 # HyprDisplays
 
+![image](https://github.com/user-attachments/assets/f10cc040-60df-423a-8192-6725915fdbd0)
+
+
 HyprDisplays is a modern Qt6-based graphical utility for arranging and configuring monitors for the Hyprland Wayland compositor. It is a spiritual successor to nwg-displays, designed specifically for Hyprland, with advanced support for HDR, 10-bit color, wide gamut, SDR brightness/saturation, VRR, and more.
 
 ## Features
