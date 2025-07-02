@@ -36,15 +36,10 @@ On Arch Linux:
 ```sh
 sudo pacman -S qt6-base qt6-tools cmake gcc pkgconf wayland-protocols
 ```
-On Ubuntu:
-```sh
-sudo apt install qt6-base-dev qt6-tools-dev cmake g++ pkg-config libwayland-dev
-```
-
 ## Building from Source
 
 ```sh
-git clone https://github.com/yourusername/HyprDisplays.git
+git clone https://github.com/ryzendew/HyprDisplays.git
 cd HyprDisplays
 mkdir build && cd build
 cmake ..
