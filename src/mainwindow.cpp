@@ -564,6 +564,66 @@ void MainWindow::setupUI()
     statusBar()->setStyleSheet("background-color: #1e1e1e; border-top: 1px solid #404040;");
     statusBar()->addWidget(m_statusLabel);
 
+    // Create settings group for application settings
+    QGroupBox *appSettingsGroup = new QGroupBox("Application Settings", this);
+    QGridLayout *appSettingsLayout = new QGridLayout(appSettingsGroup);
+    appSettingsLayout->setSpacing(10);
+    
+    // Number of workspaces
+    m_numWorkspacesSpinBox = new QSpinBox(this);
+    m_numWorkspacesSpinBox->setRange(1, 50);
+    m_numWorkspacesSpinBox->setValue(m_numWorkspaces);
+    appSettingsLayout->addWidget(new QLabel("Number of Workspaces:"), 0, 0);
+    appSettingsLayout->addWidget(m_numWorkspacesSpinBox, 0, 1);
+    
+    // Auto apply checkbox
+    m_autoApplyCheckBox = new QCheckBox("Auto-apply changes", this);
+    m_autoApplyCheckBox->setToolTip("Automatically apply display changes without confirmation");
+    appSettingsLayout->addWidget(m_autoApplyCheckBox, 1, 0);
+    
+    // Show overlay checkbox
+    m_showOverlayCheckBox = new QCheckBox("Show overlay indicators", this);
+    m_showOverlayCheckBox->setToolTip("Show screen identification overlays when applying changes");
+    appSettingsLayout->addWidget(m_showOverlayCheckBox, 1, 1);
+    
+    // Overlay timeout spinbox
+    m_overlayTimeoutSpinBox = new QSpinBox(this);
+    m_overlayTimeoutSpinBox->setRange(100, 5000);
+    m_overlayTimeoutSpinBox->setValue(m_overlayTimeout);
+    m_overlayTimeoutSpinBox->setSuffix(" ms");
+    appSettingsLayout->addWidget(new QLabel("Overlay Timeout:"), 2, 0);
+    appSettingsLayout->addWidget(m_overlayTimeoutSpinBox, 2, 1);
+    
+    m_mainLayout->addWidget(appSettingsGroup);
+    
+    // Create button layout
+    m_buttonLayout = new QHBoxLayout();
+    m_buttonLayout->setSpacing(10);
+    
+    m_applyButton = new QPushButton("Apply", this);
+    m_applyButton->setToolTip("Apply current display configuration to Hyprland");
+    
+    m_resetButton = new QPushButton("Reset", this);
+    m_resetButton->setToolTip("Reset all changes to last saved configuration");
+    
+    QPushButton *refreshButton = new QPushButton("Refresh", this);
+    refreshButton->setToolTip("Refresh display information from Hyprland");
+    
+    QPushButton *saveButton = new QPushButton("Save", this);
+    saveButton->setToolTip("Save current configuration to file");
+    
+    QPushButton *loadButton = new QPushButton("Load", this);
+    loadButton->setToolTip("Load configuration from file");
+    
+    m_buttonLayout->addWidget(m_applyButton);
+    m_buttonLayout->addWidget(m_resetButton);
+    m_buttonLayout->addWidget(refreshButton);
+    m_buttonLayout->addStretch();
+    m_buttonLayout->addWidget(saveButton);
+    m_buttonLayout->addWidget(loadButton);
+    
+    m_mainLayout->addLayout(m_buttonLayout);
+    
     // Setup system tray
     setupTrayIcon();
 }
@@ -809,11 +869,22 @@ void MainWindow::loadSettings()
         }
         
         qInfo() << "m_overlayTimeoutSpinBox is null:" << (m_overlayTimeoutSpinBox == nullptr);
-        if (m_overlayTimeoutSpinBox && m_overlayTimeoutSpinBox->isWidgetType()) {
-            qInfo() << "Setting overlayTimeoutSpinBox to:" << m_overlayTimeout;
-            m_overlayTimeoutSpinBox->setValue(m_overlayTimeout);
+        if (m_overlayTimeoutSpinBox) {
+            qInfo() << "m_overlayTimeoutSpinBox pointer is valid, checking if it's a widget...";
+            try {
+                if (m_overlayTimeoutSpinBox->isWidgetType()) {
+                    qInfo() << "Setting overlayTimeoutSpinBox to:" << m_overlayTimeout;
+                    m_overlayTimeoutSpinBox->setValue(m_overlayTimeout);
+                } else {
+                    qInfo() << "m_overlayTimeoutSpinBox is not a valid widget, skipping";
+                }
+            } catch (const std::exception& e) {
+                qCritical() << "Exception checking overlayTimeoutSpinBox:" << e.what();
+            } catch (...) {
+                qCritical() << "Unknown exception checking overlayTimeoutSpinBox";
+            }
         } else {
-            qInfo() << "m_overlayTimeoutSpinBox is not a valid widget, skipping";
+            qInfo() << "m_overlayTimeoutSpinBox is null, skipping";
         }
         
         qInfo() << "loadSettings() completed successfully";
