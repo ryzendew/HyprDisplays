@@ -1,4 +1,0 @@
-# Hashes of file build rules.
-b22001ce88d4f81420a6f6d51790f892 CMakeFiles/hyprdisplays_autogen
-4105f3038aa01bf5e988da027a3a324a hyprdisplays_autogen/timestamp
-d8a231e9d42affe2ec5239b9ab856a33 qrc_resources.cpp

@@ -1,9 +1,0 @@
-/home/matt1909/HyprDisplays/build/CMakeFiles/hyprdisplays.dir
-/home/matt1909/HyprDisplays/build/CMakeFiles/edit_cache.dir
-/home/matt1909/HyprDisplays/build/CMakeFiles/rebuild_cache.dir
-/home/matt1909/HyprDisplays/build/CMakeFiles/list_install_components.dir
-/home/matt1909/HyprDisplays/build/CMakeFiles/install.dir
-/home/matt1909/HyprDisplays/build/CMakeFiles/install/local.dir
-/home/matt1909/HyprDisplays/build/CMakeFiles/install/strip.dir
-/home/matt1909/HyprDisplays/build/CMakeFiles/hyprdisplays_autogen_timestamp_deps.dir
-/home/matt1909/HyprDisplays/build/CMakeFiles/hyprdisplays_autogen.dir
