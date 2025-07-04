@@ -11,6 +11,10 @@ on:
         required: true
         default: '0.0.1'
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   build-linux:
     runs-on: ubuntu-latest
