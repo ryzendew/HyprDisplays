@@ -1,0 +1,138 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.0.1)'
+        required: true
+        default: '0.0.1'
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        qt-version: ['6.5', '6.6']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: ${{ matrix.qt-version }}
+        arch: x64
+        modules: qtcharts qtbase qtdeclarative qtquickcontrols2 qtgraphicaleffects
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential pkg-config wayland-protocols
+
+    - name: Configure CMake
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      run: |
+        cd build
+        make -j$(nproc)
+
+    - name: Create AppImage
+      run: |
+        cd build
+        # Create AppDir structure
+        mkdir -p AppDir/usr/bin
+        mkdir -p AppDir/usr/share/applications
+        mkdir -p AppDir/usr/share/icons/hicolor/scalable/apps
+        
+        # Copy executable and resources
+        cp hyprdisplays AppDir/usr/bin/
+        cp ../hyprdisplays.desktop AppDir/usr/share/applications/
+        cp ../hyprdisplays.svg AppDir/usr/share/icons/hicolor/scalable/apps/
+        
+        # Create AppRun
+        cat > AppDir/AppRun << 'EOF'
+        #!/bin/bash
+        cd "$(dirname "$0")"
+        exec ./usr/bin/hyprdisplays "$@"
+        EOF
+        chmod +x AppDir/AppRun
+        
+        # Download and use appimagetool
+        wget -c "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
+        chmod +x appimagetool-x86_64.AppImage
+        ./appimagetool-x86_64.AppImage AppDir HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage
+
+    - name: Upload AppImage
+      uses: actions/upload-artifact@v4
+      with:
+        name: HyprDisplays-${{ github.event.inputs.version || github.ref_name }}-Qt${{ matrix.qt-version }}
+        path: build/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage
+
+  create-release:
+    needs: build-linux
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.version
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.event.inputs.version && format('v{0}', github.event.inputs.version) || github.ref_name }}
+        name: HyprDisplays ${{ github.event.inputs.version || github.ref_name }}
+        body: |
+          ## HyprDisplays ${{ github.event.inputs.version || github.ref_name }}
+          
+          ### Alpha Release
+          
+          This is an alpha release of HyprDisplays, a Qt6-based graphical utility for managing monitors in Hyprland.
+          
+          ### Features
+          - Drag-and-drop monitor arrangement
+          - Advanced Hyprland options (HDR, 10-bit, wide gamut, VRR)
+          - Real-time position editing
+          - Native Hyprland config format
+          
+          ### Installation
+          Download the AppImage and run:
+          ```bash
+          chmod +x HyprDisplays-*.AppImage
+          ./HyprDisplays-*.AppImage
+          ```
+          
+          ### Building from Source
+          ```bash
+          git clone https://github.com/${{ github.repository }}.git
+          cd HyprDisplays
+          mkdir build && cd build
+          cmake ..
+          make -j$(nproc)
+          ```
+          
+          ### Dependencies
+          - Qt6
+          - Hyprland
+          - CMake
+          - C++17 compiler
+        draft: false
+        prerelease: true
+        files: |
+          artifacts/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}-Qt*/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
