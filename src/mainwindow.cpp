@@ -84,8 +84,7 @@ MainWindow::MainWindow(QWidget *parent)
         m_hyprlandInterface = nullptr;
     }
     
-    // Initialize core components
-    m_hyprlandInterface = new HyprlandInterface(this);
+    // Initialize core components - REMOVED DUPLICATE CREATION
     
     // Connect signals
     qDebug() << "Connecting DisplayManager signals...";
@@ -802,7 +801,9 @@ void MainWindow::showNotification(const QString &message, bool isError)
                                isError ? QSystemTrayIcon::Critical : QSystemTrayIcon::Information, 3000);
     }
     
-    m_statusLabel->setText(message);
+    if (m_statusLabel) {
+        m_statusLabel->setText(message);
+    }
     
     if (isError) {
         qWarning() << "HyprDisplays Error:" << message;
@@ -830,13 +831,37 @@ void MainWindow::onDisplayChanged()
     }
     m_isUpdatingDisplays = true;
     qDebug() << "onDisplayChanged called";
+    
+    // Safety checks for null pointers
+    if (!m_monitorLayoutScene) {
+        qWarning() << "[onDisplayChanged] m_monitorLayoutScene is null!";
+        m_isUpdatingDisplays = false;
+        return;
+    }
+    
+    if (!m_monitorLayoutView) {
+        qWarning() << "[onDisplayChanged] m_monitorLayoutView is null!";
+        m_isUpdatingDisplays = false;
+        return;
+    }
+    
     if (m_monitorSettingsPanel) m_monitorSettingsPanel->setVisible(false);
     m_monitorLayoutScene->clear();
     m_monitorProxyWidgets.clear();
     m_monitorPositions.clear();
-    if (!m_displayManager) { qWarning() << "[onDisplayChanged] m_displayManager is null!"; m_isUpdatingDisplays = false; return; }
+    
+    if (!m_displayManager) { 
+        qWarning() << "[onDisplayChanged] m_displayManager is null!"; 
+        m_isUpdatingDisplays = false; 
+        return; 
+    }
+    
     QList<DisplayInfo> displays = m_displayManager->getDisplays();
-    if (displays.isEmpty()) { qWarning() << "[onDisplayChanged] No displays found!"; m_isUpdatingDisplays = false; return; }
+    if (displays.isEmpty()) { 
+        qWarning() << "[onDisplayChanged] No displays found!"; 
+        m_isUpdatingDisplays = false; 
+        return; 
+    }
     
     // 1. Calculate logical bounding box
     int minX = INT_MAX, minY = INT_MAX, maxX = INT_MIN, maxY = INT_MIN;
