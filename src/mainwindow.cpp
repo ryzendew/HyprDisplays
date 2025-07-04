@@ -766,17 +766,56 @@ void MainWindow::setupConnections()
 
 void MainWindow::loadSettings()
 {
-    m_settings = new QSettings("HyprDisplays", "HyprDisplays", this);
+    qInfo() << "loadSettings() called";
     
-    m_autoApply = m_settings->value("autoApply", false).toBool();
-    m_showOverlay = m_settings->value("showOverlay", true).toBool();
-    m_overlayTimeout = m_settings->value("overlayTimeout", 500).toInt();
-    m_minimizeToTray = m_settings->value("minimizeToTray", false).toBool();
-    m_startMinimized = m_settings->value("startMinimized", false).toBool();
-    
-    if (m_autoApplyCheckBox) m_autoApplyCheckBox->setChecked(m_autoApply);
-    if (m_showOverlayCheckBox) m_showOverlayCheckBox->setChecked(m_showOverlay);
-    if (m_overlayTimeoutSpinBox) m_overlayTimeoutSpinBox->setValue(m_overlayTimeout);
+    try {
+        qInfo() << "Creating QSettings object...";
+        m_settings = new QSettings("HyprDisplays", "HyprDisplays", this);
+        qInfo() << "QSettings object created successfully";
+        
+        qInfo() << "Loading settings values...";
+        m_autoApply = m_settings->value("autoApply", false).toBool();
+        qInfo() << "autoApply loaded:" << m_autoApply;
+        
+        m_showOverlay = m_settings->value("showOverlay", true).toBool();
+        qInfo() << "showOverlay loaded:" << m_showOverlay;
+        
+        m_overlayTimeout = m_settings->value("overlayTimeout", 500).toInt();
+        qInfo() << "overlayTimeout loaded:" << m_overlayTimeout;
+        
+        m_minimizeToTray = m_settings->value("minimizeToTray", false).toBool();
+        qInfo() << "minimizeToTray loaded:" << m_minimizeToTray;
+        
+        m_startMinimized = m_settings->value("startMinimized", false).toBool();
+        qInfo() << "startMinimized loaded:" << m_startMinimized;
+        
+        qInfo() << "About to update UI widgets...";
+        qInfo() << "m_autoApplyCheckBox is null:" << (m_autoApplyCheckBox == nullptr);
+        if (m_autoApplyCheckBox) {
+            qInfo() << "Setting autoApplyCheckBox to:" << m_autoApply;
+            m_autoApplyCheckBox->setChecked(m_autoApply);
+        }
+        
+        qInfo() << "m_showOverlayCheckBox is null:" << (m_showOverlayCheckBox == nullptr);
+        if (m_showOverlayCheckBox) {
+            qInfo() << "Setting showOverlayCheckBox to:" << m_showOverlay;
+            m_showOverlayCheckBox->setChecked(m_showOverlay);
+        }
+        
+        qInfo() << "m_overlayTimeoutSpinBox is null:" << (m_overlayTimeoutSpinBox == nullptr);
+        if (m_overlayTimeoutSpinBox) {
+            qInfo() << "Setting overlayTimeoutSpinBox to:" << m_overlayTimeout;
+            m_overlayTimeoutSpinBox->setValue(m_overlayTimeout);
+        }
+        
+        qInfo() << "loadSettings() completed successfully";
+    } catch (const std::exception& e) {
+        qCritical() << "Exception in loadSettings():" << e.what();
+        throw;
+    } catch (...) {
+        qCritical() << "Unknown exception in loadSettings()";
+        throw;
+    }
 }
 
 void MainWindow::saveSettings()
