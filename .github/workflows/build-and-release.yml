@@ -40,81 +40,88 @@ jobs:
         cd build
         make -j$(nproc)
 
-    - name: Create AppImage
+    - name: Create Release Package
       run: |
         cd build
-        # Create AppDir structure
-        mkdir -p AppDir/usr/bin
-        mkdir -p AppDir/usr/share/applications
-        mkdir -p AppDir/usr/share/icons/hicolor/scalable/apps
         
-        # Copy executable and resources
-        cp hyprdisplays AppDir/usr/bin/
-        cp ../hyprdisplays.desktop AppDir/usr/share/applications/
-        cp ../hyprdisplays.svg AppDir/usr/share/icons/hicolor/scalable/apps/
+        # Create a simple release directory
+        mkdir -p HyprDisplays-${{ github.event.inputs.version || github.ref_name }}
+        cd HyprDisplays-${{ github.event.inputs.version || github.ref_name }}
         
-        # Create AppRun
-        cat > AppDir/AppRun << 'EOF'
+        # Copy the executable
+        cp ../hyprdisplays .
+        
+        # Copy desktop file and icon
+        cp ../../hyprdisplays.desktop .
+        cp ../../hyprdisplays.svg .
+        
+        # Create a simple install script
+        cat > install.sh << 'EOF'
         #!/bin/bash
-        cd "$(dirname "$0")"
-        exec ./usr/bin/hyprdisplays "$@"
+        echo "Installing HyprDisplays..."
+        
+        # Copy executable to /usr/local/bin
+        sudo cp hyprdisplays /usr/local/bin/
+        sudo chmod +x /usr/local/bin/hyprdisplays
+        
+        # Copy desktop file
+        sudo cp hyprdisplays.desktop /usr/share/applications/
+        
+        # Copy icon
+        sudo mkdir -p /usr/share/icons/hicolor/scalable/apps/
+        sudo cp hyprdisplays.svg /usr/share/icons/hicolor/scalable/apps/
+        
+        echo "HyprDisplays installed successfully!"
+        echo "You can now run it from your application menu or by typing 'hyprdisplays'"
         EOF
-        chmod +x AppDir/AppRun
+        chmod +x install.sh
         
-        # Try to use linuxdeployqt for AppImage creation (more reliable in CI)
-        echo "Attempting to use linuxdeployqt for AppImage creation..."
+        # Create a simple run script
+        cat > run.sh << 'EOF'
+        #!/bin/bash
+        # Simple script to run HyprDisplays
+        ./hyprdisplays "$@"
+        EOF
+        chmod +x run.sh
         
-        # Download linuxdeployqt
-        wget -c "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
-        chmod +x linuxdeployqt-continuous-x86_64.AppImage
+        # Create README
+        cat > README.txt << 'EOF'
+        HyprDisplays ${{ github.event.inputs.version || github.ref_name }}
         
-        # Set up environment for linuxdeployqt
-        export QMAKE=/usr/bin/qmake6
-        export PATH="/usr/lib/x86_64-linux-gnu/qt6/bin:$PATH"
+        A Qt6-based graphical utility for managing monitors in Hyprland.
         
-        # Create AppImage using linuxdeployqt
-        ./linuxdeployqt-continuous-x86_64.AppImage AppDir/usr/share/applications/hyprdisplays.desktop -appimage
+        INSTALLATION:
+        Option 1 - System install:
+          sudo ./install.sh
         
-        # Rename the created AppImage
-        if [ -f "HyprDisplays-x86_64.AppImage" ]; then
-            mv HyprDisplays-x86_64.AppImage HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage
-        elif [ -f "hyprdisplays-x86_64.AppImage" ]; then
-            mv hyprdisplays-x86_64.AppImage HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage
-        else
-            echo "Warning: linuxdeployqt did not create expected AppImage, trying fallback method..."
-            
-            # Fallback: Use appimagetool with extraction
-            wget -c "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
-            chmod +x appimagetool-x86_64.AppImage
-            
-            # Try to run appimagetool directly (some CI environments support FUSE)
-            if ./appimagetool-x86_64.AppImage AppDir HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage; then
-                echo "AppImage created successfully with direct appimagetool"
-            else
-                echo "Direct appimagetool failed, trying extraction method..."
-                # Extract and use the binary
-                ./appimagetool-x86_64.AppImage --appimage-extract
-                find squashfs-root -name "*appimagetool*" -type f -exec chmod +x {} \;
-                find squashfs-root -name "*appimagetool*" -type f -exec {} AppDir HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage \;
-            fi
-        fi
+        Option 2 - Run directly:
+          ./run.sh
         
-        # Verify the AppImage was created
-        ls -la *.AppImage
-        echo "AppImage creation completed successfully"
+        DEPENDENCIES:
+        - Qt6 runtime libraries
+        - Hyprland with hyprctl
+        - Wayland environment
         
-        # Also create a tarball as fallback
-        echo "Creating fallback tarball..."
-        tar -czf HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.tar.gz AppDir/
+        FEATURES:
+        - Drag-and-drop monitor arrangement
+        - Advanced Hyprland options (HDR, 10-bit, wide gamut, VRR)
+        - Real-time position editing
+        - Native Hyprland config format
+        EOF
+        
+        cd ..
+        
+        # Create tarball
+        tar -czf HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.tar.gz HyprDisplays-${{ github.event.inputs.version || github.ref_name }}/
+        
+        echo "Release package created successfully"
         ls -la *.tar.gz
 
-    - name: Upload Artifacts
+    - name: Upload Release Package
       uses: actions/upload-artifact@v4
       with:
         name: HyprDisplays-${{ github.event.inputs.version || github.ref_name }}
-        path: |
-          build/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage
-          build/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.tar.gz
+        path: build/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.tar.gz
 
   create-release:
     needs: build-linux
@@ -150,19 +157,20 @@ jobs:
           
           ### Installation
           
-          **Option 1: AppImage (Recommended)**
-          Download the AppImage and run:
-          ```bash
-          chmod +x HyprDisplays-*.AppImage
-          ./HyprDisplays-*.AppImage
-          ```
-          
-          **Option 2: Extract from Tarball**
-          If the AppImage doesn't work on your system:
+          Download the release package and extract it:
           ```bash
           tar -xzf HyprDisplays-*.tar.gz
           cd HyprDisplays-*
-          ./AppRun
+          ```
+          
+          **Option 1: System install**
+          ```bash
+          sudo ./install.sh
+          ```
+          
+          **Option 2: Run directly**
+          ```bash
+          ./run.sh
           ```
           
           ### Building from Source
@@ -181,8 +189,6 @@ jobs:
           - C++17 compiler
         draft: false
         prerelease: true
-        files: |
-          artifacts/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage
-          artifacts/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.tar.gz
+        files: artifacts/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.tar.gz
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
