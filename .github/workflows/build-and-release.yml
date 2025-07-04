@@ -2,6 +2,8 @@ name: Build and Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
   workflow_dispatch:
@@ -19,9 +21,33 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Calculate Version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version }}" ]; then
+          # Use manual version if provided
+          echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+        elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          # Use tag version
+          echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+        else
+          # Auto-increment version based on commit count
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          VERSION_MAJOR=0
+          VERSION_MINOR=1
+          VERSION_PATCH=$((COMMIT_COUNT * 10))
+          echo "version=$VERSION_MAJOR.$VERSION_MINOR.$VERSION_PATCH" >> $GITHUB_OUTPUT
+        fi
+        echo "Calculated version: ${{ steps.version.outputs.version }}"
 
     - name: Setup Qt environment
       run: |
@@ -49,8 +75,8 @@ jobs:
         cd build
         
         # Create a simple release directory
-        mkdir -p HyprDisplays-${{ github.event.inputs.version || github.ref_name }}
-        cd HyprDisplays-${{ github.event.inputs.version || github.ref_name }}
+        mkdir -p HyprDisplays-${{ steps.version.outputs.version }}
+        cd HyprDisplays-${{ steps.version.outputs.version }}
         
         # Copy the executable
         cp ../hyprdisplays .
@@ -90,7 +116,7 @@ jobs:
         
         # Create README
         cat > README.txt << 'EOF'
-        HyprDisplays ${{ github.event.inputs.version || github.ref_name }}
+        HyprDisplays ${{ steps.version.outputs.version }}
         
         A Qt6-based graphical utility for managing monitors in Hyprland.
         
@@ -116,7 +142,7 @@ jobs:
         cd ..
         
         # Create zip file
-        zip -r HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.zip HyprDisplays-${{ github.event.inputs.version || github.ref_name }}/
+        zip -r HyprDisplays-${{ steps.version.outputs.version }}.zip HyprDisplays-${{ steps.version.outputs.version }}/
         
         echo "Release package created successfully"
         ls -la *.zip
@@ -124,13 +150,13 @@ jobs:
     - name: Upload Release Package
       uses: actions/upload-artifact@v4
       with:
-        name: HyprDisplays-${{ github.event.inputs.version || github.ref_name }}
-        path: build/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.zip
+        name: HyprDisplays-${{ steps.version.outputs.version }}
+        path: build/HyprDisplays-${{ steps.version.outputs.version }}.zip
 
   create-release:
     needs: build-linux
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.version
+    if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.version || github.ref == 'refs/heads/main'
     permissions:
       contents: write
     
@@ -148,16 +174,17 @@ jobs:
         echo "GitHub ref: ${{ github.ref }}"
         echo "GitHub ref name: ${{ github.ref_name }}"
         echo "Event inputs version: ${{ github.event.inputs.version }}"
-        echo "Tag name will be: ${{ github.event.inputs.version && format('v{0}', github.event.inputs.version) || github.ref_name }}"
-        echo "Release name will be: HyprDisplays ${{ github.event.inputs.version || github.ref_name }}"
+        echo "Build version: ${{ needs.build-linux.outputs.version }}"
+        echo "Tag name will be: v${{ needs.build-linux.outputs.version }}"
+        echo "Release name will be: HyprDisplays ${{ needs.build-linux.outputs.version }}"
         ls -la artifacts/
         
     - name: Create Release
       run: |
         # Create release using GitHub CLI
-        gh release create ${{ github.event.inputs.version && format('v{0}', github.event.inputs.version) || github.ref_name }} \
-          --title "HyprDisplays ${{ github.event.inputs.version || github.ref_name }}" \
-          --notes "## HyprDisplays ${{ github.event.inputs.version || github.ref_name }}
+        gh release create v${{ needs.build-linux.outputs.version }} \
+          --title "HyprDisplays ${{ needs.build-linux.outputs.version }}" \
+          --notes "## HyprDisplays ${{ needs.build-linux.outputs.version }}
           
           ### Alpha Release
           
@@ -202,6 +229,6 @@ jobs:
           - CMake
           - C++17 compiler" \
           --prerelease \
-          artifacts/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.zip
+          artifacts/HyprDisplays-${{ needs.build-linux.outputs.version }}/HyprDisplays-${{ needs.build-linux.outputs.version }}.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
