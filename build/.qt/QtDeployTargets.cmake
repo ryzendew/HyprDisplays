@@ -1,2 +1,0 @@
-set(__QT_DEPLOY_TARGET_hyprdisplays_FILE /home/matt1909/HyprDisplays/build/hyprdisplays)
-set(__QT_DEPLOY_TARGET_hyprdisplays_TYPE EXECUTABLE)
