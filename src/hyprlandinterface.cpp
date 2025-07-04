@@ -76,8 +76,8 @@ HyprlandInterface::HyprlandInterface(QObject *parent)
     // Start connection monitoring
     m_connectionTimer->start();
     
-    // Initial connection check
-    updateConnectionStatus();
+    // Initial connection check with safety delay
+    QTimer::singleShot(100, this, &HyprlandInterface::updateConnectionStatus);
 }
 
 HyprlandInterface::~HyprlandInterface()
@@ -269,8 +269,18 @@ QString HyprlandInterface::getWorkspacesPath() const
 
 QString HyprlandInterface::executeCommand(const QStringList &args)
 {
+    if (!m_hyprctlProcess) {
+        logError("hyprctl process not initialized");
+        return QString();
+    }
+    
     m_hyprctlProcess->start("hyprctl", args);
-    m_hyprctlProcess->waitForFinished(5000);
+    
+    if (!m_hyprctlProcess->waitForFinished(5000)) {
+        logError(QString("Command timed out: %1").arg(args.join(' ')));
+        m_hyprctlProcess->kill();
+        return QString();
+    }
     
     if (m_hyprctlProcess->exitCode() != 0) {
         logError(QString("Command failed: %1").arg(args.join(' ')));
@@ -284,6 +294,11 @@ QString HyprlandInterface::executeCommand(const QStringList &args)
 
 bool HyprlandInterface::executeCommandAsync(const QStringList &args)
 {
+    if (!m_commandProcess) {
+        logError("command process not initialized");
+        return false;
+    }
+    
     m_commandProcess->start("hyprctl", args);
     return m_commandProcess->waitForStarted(5000);
 }
@@ -411,13 +426,35 @@ void HyprlandInterface::updateConnectionStatus()
 {
     bool wasConnected = m_isConnected;
     
-    // Check if hyprctl is available
+    // First check if hyprctl executable exists
+    QFileInfo hyprctlFile("/usr/bin/hyprctl");
+    if (!hyprctlFile.exists()) {
+        hyprctlFile = QFileInfo("/usr/local/bin/hyprctl");
+    }
+    
+    if (!hyprctlFile.exists()) {
+        // hyprctl not found, don't try to connect
+        m_isHyprlandRunning = false;
+        m_isConnected = false;
+        if (wasConnected) {
+            emit disconnected();
+        }
+        return;
+    }
+    
+    // Check if hyprctl is available and working
     QProcess testProcess;
     testProcess.start("hyprctl", {"version"});
-    testProcess.waitForFinished(2000);
     
-    m_isHyprlandRunning = (testProcess.exitCode() == 0);
-    m_isConnected = m_isHyprlandRunning;
+    // Use a shorter timeout and handle process errors
+    if (!testProcess.waitForFinished(1000)) {
+        testProcess.kill();
+        m_isHyprlandRunning = false;
+        m_isConnected = false;
+    } else {
+        m_isHyprlandRunning = (testProcess.exitCode() == 0);
+        m_isConnected = m_isHyprlandRunning;
+    }
     
     if (m_isConnected && !wasConnected) {
         emit connected();

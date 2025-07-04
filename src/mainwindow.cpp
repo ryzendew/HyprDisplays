@@ -63,9 +63,18 @@ MainWindow::MainWindow(QWidget *parent)
     , m_layoutOffsetY(0.0)
     , m_updatingFromSpinbox(false)
 {
+    qDebug() << "MainWindow constructor started";
     setupUI();
+    qDebug() << "UI setup completed";
     setupConnections();
+    qDebug() << "Connections setup completed";
     loadSettings();
+    qDebug() << "Settings loaded";
+    
+    // Initialize core components
+    qDebug() << "Creating HyprlandInterface...";
+    m_hyprlandInterface = new HyprlandInterface(this);
+    qDebug() << "HyprlandInterface created";
     
     // Initialize core components
     m_hyprlandInterface = new HyprlandInterface(this);
@@ -94,8 +103,12 @@ MainWindow::MainWindow(QWidget *parent)
         showNotification(message, false);
     });
     
-    // Initial refresh
-    QTimer::singleShot(100, this, &MainWindow::refreshDisplays);
+    // Initial refresh with safety check
+    QTimer::singleShot(100, this, [this]() {
+        if (m_displayManager) {
+            refreshDisplays();
+        }
+    });
     
     // Load existing monitor.conf if it exists
     QString monitorConfPath = QDir::homePath() + "/.config/hypr/monitors.conf";
