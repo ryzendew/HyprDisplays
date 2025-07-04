@@ -87,6 +87,7 @@ MainWindow::MainWindow(QWidget *parent)
     }
     
     try {
+        qInfo() << "About to load settings...";
         loadSettings();
         qInfo() << "Settings loaded";
     } catch (const std::exception& e) {
@@ -98,10 +99,11 @@ MainWindow::MainWindow(QWidget *parent)
     }
     
     // Initialize core components
-    qDebug() << "Creating HyprlandInterface...";
+    qInfo() << "About to create HyprlandInterface...";
     try {
+        qInfo() << "Creating HyprlandInterface object...";
         m_hyprlandInterface = new HyprlandInterface(this);
-        qDebug() << "HyprlandInterface created successfully";
+        qInfo() << "HyprlandInterface created successfully";
     } catch (const std::exception& e) {
         qCritical() << "Failed to create HyprlandInterface:" << e.what();
         m_hyprlandInterface = nullptr;
@@ -113,7 +115,7 @@ MainWindow::MainWindow(QWidget *parent)
     // Initialize core components - REMOVED DUPLICATE CREATION
     
     // Connect signals
-    qDebug() << "Connecting DisplayManager signals...";
+    qInfo() << "About to connect DisplayManager signals...";
     connect(m_displayManager, &DisplayManager::displaysChanged, this, &MainWindow::onDisplayChanged);
     connect(m_displayManager, &DisplayManager::error, this, [this](const QString &message) {
         showNotification(message, true);
@@ -121,8 +123,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_displayManager, &DisplayManager::success, this, [this](const QString &message) {
         showNotification(message, false);
     });
+    qInfo() << "DisplayManager signals connected";
     
-    qDebug() << "Connecting HyprlandInterface signals...";
+    qInfo() << "About to connect HyprlandInterface signals...";
     if (m_hyprlandInterface) {
         connect(m_hyprlandInterface, &HyprlandInterface::connected, this, [this]() {
             if (m_statusLabel) m_statusLabel->setText("Connected to Hyprland");
@@ -141,17 +144,23 @@ MainWindow::MainWindow(QWidget *parent)
     } else {
         qWarning() << "HyprlandInterface is null, skipping signal connections";
     }
+    qInfo() << "HyprlandInterface signals connected";
     
     // Initial refresh with safety check
+    qInfo() << "Setting up initial refresh timer...";
     QTimer::singleShot(100, this, [this]() {
+        qInfo() << "Initial refresh timer triggered";
         if (m_displayManager) {
             refreshDisplays();
         }
     });
     
     // Load existing monitor.conf if it exists
+    qInfo() << "Checking for existing monitors.conf...";
     QString monitorConfPath = QDir::homePath() + "/.config/hypr/monitors.conf";
+    qInfo() << "Monitor config path:" << monitorConfPath;
     if (QFile::exists(monitorConfPath)) {
+        qInfo() << "Found existing monitors.conf, will load it";
         QTimer::singleShot(200, this, [this, monitorConfPath]() {
             if (m_configManager && m_configManager->loadHyprlandMonitors(monitorConfPath)) {
                 // Get the loaded configuration
@@ -202,7 +211,10 @@ MainWindow::MainWindow(QWidget *parent)
                 showNotification("Loaded existing monitors.conf configuration");
             }
         });
+    } else {
+        qInfo() << "No existing monitors.conf found";
     }
+    qInfo() << "MainWindow constructor completed successfully";
 }
 
 MainWindow::~MainWindow()
