@@ -31,20 +31,36 @@ HyprlandInterface::HyprlandInterface(QObject *parent)
     , m_logFile(nullptr)
     , m_logStream(nullptr)
 {
-    qDebug() << "HyprlandInterface constructor started";
-    // Initialize processes
-    qDebug() << "Creating QProcess objects...";
-    m_hyprctlProcess = new QProcess(this);
-    m_eventProcess = new QProcess(this);
-    m_commandProcess = new QProcess(this);
-    qDebug() << "QProcess objects created";
+    qInfo() << "HyprlandInterface constructor started";
+    try {
+        // Initialize processes
+        qInfo() << "Creating QProcess objects...";
+        m_hyprctlProcess = new QProcess(this);
+        m_eventProcess = new QProcess(this);
+        m_commandProcess = new QProcess(this);
+        qInfo() << "QProcess objects created";
+    } catch (const std::exception& e) {
+        qCritical() << "Failed to create QProcess objects:" << e.what();
+        throw;
+    } catch (...) {
+        qCritical() << "Unknown error creating QProcess objects";
+        throw;
+    }
     
-    // Initialize timers
-    qDebug() << "Creating QTimer objects...";
-    m_eventTimer = new QTimer(this);
-    m_connectionTimer = new QTimer(this);
-    m_reconnectTimer = new QTimer(this);
-    qDebug() << "QTimer objects created";
+    try {
+        // Initialize timers
+        qInfo() << "Creating QTimer objects...";
+        m_eventTimer = new QTimer(this);
+        m_connectionTimer = new QTimer(this);
+        m_reconnectTimer = new QTimer(this);
+        qInfo() << "QTimer objects created";
+    } catch (const std::exception& e) {
+        qCritical() << "Failed to create QTimer objects:" << e.what();
+        throw;
+    } catch (...) {
+        qCritical() << "Unknown error creating QTimer objects";
+        throw;
+    }
     
     m_eventTimer->setInterval(m_eventInterval);
     m_connectionTimer->setInterval(10000); // Check connection every 10 seconds

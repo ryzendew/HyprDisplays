@@ -63,13 +63,39 @@ MainWindow::MainWindow(QWidget *parent)
     , m_layoutOffsetY(0.0)
     , m_updatingFromSpinbox(false)
 {
-    qDebug() << "MainWindow constructor started";
-    setupUI();
-    qDebug() << "UI setup completed";
-    setupConnections();
-    qDebug() << "Connections setup completed";
-    loadSettings();
-    qDebug() << "Settings loaded";
+    qInfo() << "MainWindow constructor started";
+    try {
+        setupUI();
+        qInfo() << "UI setup completed";
+    } catch (const std::exception& e) {
+        qCritical() << "Failed to setup UI:" << e.what();
+        throw;
+    } catch (...) {
+        qCritical() << "Unknown error during UI setup";
+        throw;
+    }
+    
+    try {
+        setupConnections();
+        qInfo() << "Connections setup completed";
+    } catch (const std::exception& e) {
+        qCritical() << "Failed to setup connections:" << e.what();
+        throw;
+    } catch (...) {
+        qCritical() << "Unknown error during connections setup";
+        throw;
+    }
+    
+    try {
+        loadSettings();
+        qInfo() << "Settings loaded";
+    } catch (const std::exception& e) {
+        qCritical() << "Failed to load settings:" << e.what();
+        throw;
+    } catch (...) {
+        qCritical() << "Unknown error during settings load";
+        throw;
+    }
     
     // Initialize core components
     qDebug() << "Creating HyprlandInterface...";

@@ -31,7 +31,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake build-essential pkg-config wayland-protocols qt6-base-dev qt6-tools-dev squashfs-tools
+        sudo apt-get install -y cmake build-essential pkg-config wayland-protocols qt6-base-dev qt6-tools-dev zip
 
     - name: Configure CMake
       run: |
@@ -115,17 +115,17 @@ jobs:
         
         cd ..
         
-        # Create tarball
-        tar -czf HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.tar.gz HyprDisplays-${{ github.event.inputs.version || github.ref_name }}/
+        # Create zip file
+        zip -r HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.zip HyprDisplays-${{ github.event.inputs.version || github.ref_name }}/
         
         echo "Release package created successfully"
-        ls -la *.tar.gz
+        ls -la *.zip
 
     - name: Upload Release Package
       uses: actions/upload-artifact@v4
       with:
         name: HyprDisplays-${{ github.event.inputs.version || github.ref_name }}
-        path: build/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.tar.gz
+        path: build/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.zip
 
   create-release:
     needs: build-linux
@@ -173,7 +173,7 @@ jobs:
           
           Download the release package and extract it:
           \`\`\`bash
-          tar -xzf HyprDisplays-*.tar.gz
+          unzip HyprDisplays-*.zip
           cd HyprDisplays-*
           \`\`\`
           
@@ -202,6 +202,6 @@ jobs:
           - CMake
           - C++17 compiler" \
           --prerelease \
-          artifacts/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.tar.gz
+          artifacts/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
