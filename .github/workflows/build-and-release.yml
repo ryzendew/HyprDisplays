@@ -131,6 +131,8 @@ jobs:
     needs: build-linux
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.version
+    permissions:
+      contents: write
     
     steps:
     - name: Checkout code
@@ -141,13 +143,21 @@ jobs:
       with:
         path: artifacts
 
+    - name: Debug Release Info
+      run: |
+        echo "GitHub ref: ${{ github.ref }}"
+        echo "GitHub ref name: ${{ github.ref_name }}"
+        echo "Event inputs version: ${{ github.event.inputs.version }}"
+        echo "Tag name will be: ${{ github.event.inputs.version && format('v{0}', github.event.inputs.version) || github.ref_name }}"
+        echo "Release name will be: HyprDisplays ${{ github.event.inputs.version || github.ref_name }}"
+        ls -la artifacts/
+        
     - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ github.event.inputs.version && format('v{0}', github.event.inputs.version) || github.ref_name }}
-        name: HyprDisplays ${{ github.event.inputs.version || github.ref_name }}
-        body: |
-          ## HyprDisplays ${{ github.event.inputs.version || github.ref_name }}
+      run: |
+        # Create release using GitHub CLI
+        gh release create ${{ github.event.inputs.version && format('v{0}', github.event.inputs.version) || github.ref_name }} \
+          --title "HyprDisplays ${{ github.event.inputs.version || github.ref_name }}" \
+          --notes "## HyprDisplays ${{ github.event.inputs.version || github.ref_name }}
           
           ### Alpha Release
           
@@ -162,37 +172,36 @@ jobs:
           ### Installation
           
           Download the release package and extract it:
-          ```bash
+          \`\`\`bash
           tar -xzf HyprDisplays-*.tar.gz
           cd HyprDisplays-*
-          ```
+          \`\`\`
           
           **Option 1: System install**
-          ```bash
+          \`\`\`bash
           sudo ./install.sh
-          ```
+          \`\`\`
           
           **Option 2: Run directly**
-          ```bash
+          \`\`\`bash
           ./run.sh
-          ```
+          \`\`\`
           
           ### Building from Source
-          ```bash
+          \`\`\`bash
           git clone https://github.com/${{ github.repository }}.git
           cd HyprDisplays
           mkdir build && cd build
           cmake ..
-          make -j$(nproc)
-          ```
+          make -j\$(nproc)
+          \`\`\`
           
           ### Dependencies
           - Qt6
           - Hyprland
           - CMake
-          - C++17 compiler
-        draft: false
-        prerelease: true
-        files: artifacts/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.tar.gz
+          - C++17 compiler" \
+          --prerelease \
+          artifacts/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.tar.gz
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
