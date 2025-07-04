@@ -14,25 +14,20 @@ on:
 jobs:
   build-linux:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        qt-version: ['6.6']
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Qt
-      uses: jurplel/install-qt-action@v3
-      with:
-        version: ${{ matrix.qt-version }}
-        arch: x64
-        modules: qtbase
+    - name: Setup Qt environment
+      run: |
+        echo "Using system Qt6 packages"
+        qmake6 --version || echo "qmake6 not found, will use cmake to find Qt6"
 
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake build-essential pkg-config wayland-protocols
+        sudo apt-get install -y cmake build-essential pkg-config wayland-protocols qt6-base-dev qt6-tools-dev
 
     - name: Configure CMake
       run: |
@@ -74,7 +69,7 @@ jobs:
     - name: Upload AppImage
       uses: actions/upload-artifact@v4
       with:
-        name: HyprDisplays-${{ github.event.inputs.version || github.ref_name }}-Qt${{ matrix.qt-version }}
+        name: HyprDisplays-${{ github.event.inputs.version || github.ref_name }}
         path: build/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage
 
   create-release:
@@ -133,6 +128,6 @@ jobs:
         draft: false
         prerelease: true
         files: |
-          artifacts/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}-Qt*/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage
+          artifacts/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

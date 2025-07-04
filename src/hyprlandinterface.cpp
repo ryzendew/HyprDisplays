@@ -31,31 +31,41 @@ HyprlandInterface::HyprlandInterface(QObject *parent)
     , m_logFile(nullptr)
     , m_logStream(nullptr)
 {
+    qDebug() << "HyprlandInterface constructor started";
     // Initialize processes
+    qDebug() << "Creating QProcess objects...";
     m_hyprctlProcess = new QProcess(this);
     m_eventProcess = new QProcess(this);
     m_commandProcess = new QProcess(this);
+    qDebug() << "QProcess objects created";
     
     // Initialize timers
+    qDebug() << "Creating QTimer objects...";
     m_eventTimer = new QTimer(this);
     m_connectionTimer = new QTimer(this);
     m_reconnectTimer = new QTimer(this);
+    qDebug() << "QTimer objects created";
     
     m_eventTimer->setInterval(m_eventInterval);
     m_connectionTimer->setInterval(10000); // Check connection every 10 seconds
     m_reconnectTimer->setInterval(m_reconnectInterval);
     
     // Setup paths
+    qDebug() << "Setting up paths...";
     m_configPath = QDir::homePath() + "/.config/hypr/hyprland.conf";
     m_workspacesPath = QDir::homePath() + "/.config/hypr/workspaces.conf";
     m_monitorsPath = QDir::homePath() + "/.config/hypr/monitors.conf";
+    qDebug() << "Paths set up";
     
     // Setup regular expressions
+    qDebug() << "Setting up regular expressions...";
     m_monitorEventRegex = QRegularExpression(R"(monitoradded|monitorremoved|monitorchanged)");
     m_workspaceEventRegex = QRegularExpression(R"(workspace|workspaceadded|workspaceremoved)");
     m_configEventRegex = QRegularExpression(R"(configreloaded)");
+    qDebug() << "Regular expressions set up";
     
     // Connect signals
+    qDebug() << "Connecting process signals...";
     connect(m_hyprctlProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
             this, &HyprlandInterface::onProcessFinished);
     connect(m_hyprctlProcess, &QProcess::errorOccurred, this, &HyprlandInterface::onProcessError);
@@ -64,20 +74,27 @@ HyprlandInterface::HyprlandInterface(QObject *parent)
             this, &HyprlandInterface::onProcessFinished);
     connect(m_eventProcess, &QProcess::errorOccurred, this, &HyprlandInterface::onProcessError);
     connect(m_eventProcess, &QProcess::readyReadStandardOutput, this, &HyprlandInterface::onProcessOutput);
+    qDebug() << "Event process signals connected";
     
     connect(m_commandProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
             this, &HyprlandInterface::onProcessFinished);
     connect(m_commandProcess, &QProcess::errorOccurred, this, &HyprlandInterface::onProcessError);
+    qDebug() << "Command process signals connected";
     
     connect(m_eventTimer, &QTimer::timeout, this, &HyprlandInterface::onEventTimerTimeout);
     connect(m_connectionTimer, &QTimer::timeout, this, &HyprlandInterface::onConnectionTimerTimeout);
     connect(m_reconnectTimer, &QTimer::timeout, this, &HyprlandInterface::onReconnectTimerTimeout);
+    qDebug() << "Timer signals connected";
     
     // Start connection monitoring
+    qDebug() << "Starting connection monitoring...";
     m_connectionTimer->start();
+    qDebug() << "Connection timer started";
     
     // Initial connection check with safety delay
+    qDebug() << "Scheduling initial connection check...";
     QTimer::singleShot(100, this, &HyprlandInterface::updateConnectionStatus);
+    qDebug() << "HyprlandInterface constructor completed";
 }
 
 HyprlandInterface::~HyprlandInterface()
@@ -424,11 +441,14 @@ void HyprlandInterface::onReconnectTimerTimeout()
 
 void HyprlandInterface::updateConnectionStatus()
 {
+    qDebug() << "updateConnectionStatus called";
     bool wasConnected = m_isConnected;
     
     // First check if hyprctl executable exists
+    qDebug() << "Checking for hyprctl executable...";
     QFileInfo hyprctlFile("/usr/bin/hyprctl");
     if (!hyprctlFile.exists()) {
+        qDebug() << "hyprctl not found in /usr/bin, checking /usr/local/bin";
         hyprctlFile = QFileInfo("/usr/local/bin/hyprctl");
     }
     

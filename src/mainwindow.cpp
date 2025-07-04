@@ -73,13 +73,22 @@ MainWindow::MainWindow(QWidget *parent)
     
     // Initialize core components
     qDebug() << "Creating HyprlandInterface...";
-    m_hyprlandInterface = new HyprlandInterface(this);
-    qDebug() << "HyprlandInterface created";
+    try {
+        m_hyprlandInterface = new HyprlandInterface(this);
+        qDebug() << "HyprlandInterface created successfully";
+    } catch (const std::exception& e) {
+        qCritical() << "Failed to create HyprlandInterface:" << e.what();
+        m_hyprlandInterface = nullptr;
+    } catch (...) {
+        qCritical() << "Unknown error creating HyprlandInterface";
+        m_hyprlandInterface = nullptr;
+    }
     
     // Initialize core components
     m_hyprlandInterface = new HyprlandInterface(this);
     
     // Connect signals
+    qDebug() << "Connecting DisplayManager signals...";
     connect(m_displayManager, &DisplayManager::displaysChanged, this, &MainWindow::onDisplayChanged);
     connect(m_displayManager, &DisplayManager::error, this, [this](const QString &message) {
         showNotification(message, true);
@@ -88,20 +97,25 @@ MainWindow::MainWindow(QWidget *parent)
         showNotification(message, false);
     });
     
-    connect(m_hyprlandInterface, &HyprlandInterface::connected, this, [this]() {
-        m_statusLabel->setText("Connected to Hyprland");
-    });
-    
-    connect(m_hyprlandInterface, &HyprlandInterface::disconnected, this, [this]() {
-        m_statusLabel->setText("Disconnected from Hyprland");
-    });
-    
-    connect(m_hyprlandInterface, &HyprlandInterface::error, this, [this](const QString &message) {
-        showNotification(message, true);
-    });
-    connect(m_hyprlandInterface, &HyprlandInterface::success, this, [this](const QString &message) {
-        showNotification(message, false);
-    });
+    qDebug() << "Connecting HyprlandInterface signals...";
+    if (m_hyprlandInterface) {
+        connect(m_hyprlandInterface, &HyprlandInterface::connected, this, [this]() {
+            if (m_statusLabel) m_statusLabel->setText("Connected to Hyprland");
+        });
+        
+        connect(m_hyprlandInterface, &HyprlandInterface::disconnected, this, [this]() {
+            if (m_statusLabel) m_statusLabel->setText("Disconnected from Hyprland");
+        });
+        
+        connect(m_hyprlandInterface, &HyprlandInterface::error, this, [this](const QString &message) {
+            showNotification(message, true);
+        });
+        connect(m_hyprlandInterface, &HyprlandInterface::success, this, [this](const QString &message) {
+            showNotification(message, false);
+        });
+    } else {
+        qWarning() << "HyprlandInterface is null, skipping signal connections";
+    }
     
     // Initial refresh with safety check
     QTimer::singleShot(100, this, [this]() {
