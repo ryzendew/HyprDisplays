@@ -27,7 +27,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake build-essential pkg-config wayland-protocols qt6-base-dev qt6-tools-dev
+        sudo apt-get install -y cmake build-essential pkg-config wayland-protocols qt6-base-dev qt6-tools-dev squashfs-tools
 
     - name: Configure CMake
       run: |
@@ -61,16 +61,34 @@ jobs:
         EOF
         chmod +x AppDir/AppRun
         
-        # Download and use appimagetool
+        # Download appimagetool and extract it (since FUSE isn't available in CI)
         wget -c "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
         chmod +x appimagetool-x86_64.AppImage
-        ./appimagetool-x86_64.AppImage AppDir HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage
+        
+        # Extract the appimagetool to get the binary
+        ./appimagetool-x86_64.AppImage --appimage-extract
+        chmod +x squashfs-root/appimagetool
+        
+        # Use the extracted appimagetool to create the AppImage
+        echo "Creating AppImage with extracted appimagetool..."
+        ./squashfs-root/appimagetool AppDir HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage
+        
+        # Verify the AppImage was created
+        ls -la *.AppImage
+        echo "AppImage creation completed successfully"
+        
+        # Also create a tarball as fallback
+        echo "Creating fallback tarball..."
+        tar -czf HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.tar.gz AppDir/
+        ls -la *.tar.gz
 
-    - name: Upload AppImage
+    - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: HyprDisplays-${{ github.event.inputs.version || github.ref_name }}
-        path: build/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage
+        path: |
+          build/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage
+          build/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.tar.gz
 
   create-release:
     needs: build-linux
@@ -105,10 +123,20 @@ jobs:
           - Native Hyprland config format
           
           ### Installation
+          
+          **Option 1: AppImage (Recommended)**
           Download the AppImage and run:
           ```bash
           chmod +x HyprDisplays-*.AppImage
           ./HyprDisplays-*.AppImage
+          ```
+          
+          **Option 2: Extract from Tarball**
+          If the AppImage doesn't work on your system:
+          ```bash
+          tar -xzf HyprDisplays-*.tar.gz
+          cd HyprDisplays-*
+          ./AppRun
           ```
           
           ### Building from Source
@@ -129,5 +157,6 @@ jobs:
         prerelease: true
         files: |
           artifacts/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage
+          artifacts/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}/HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.tar.gz
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
