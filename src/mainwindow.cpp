@@ -86,18 +86,6 @@ MainWindow::MainWindow(QWidget *parent)
         throw;
     }
     
-    try {
-        qInfo() << "About to load settings...";
-        loadSettings();
-        qInfo() << "Settings loaded";
-    } catch (const std::exception& e) {
-        qCritical() << "Failed to load settings:" << e.what();
-        throw;
-    } catch (...) {
-        qCritical() << "Unknown error during settings load";
-        throw;
-    }
-    
     // Initialize core components
     qInfo() << "About to create HyprlandInterface...";
     try {
@@ -214,6 +202,20 @@ MainWindow::MainWindow(QWidget *parent)
     } else {
         qInfo() << "No existing monitors.conf found";
     }
+    
+    // Load settings after all components are initialized
+    try {
+        qInfo() << "About to load settings...";
+        loadSettings();
+        qInfo() << "Settings loaded";
+    } catch (const std::exception& e) {
+        qCritical() << "Failed to load settings:" << e.what();
+        // Don't throw here, just log the error and continue
+    } catch (...) {
+        qCritical() << "Unknown error during settings load";
+        // Don't throw here, just log the error and continue
+    }
+    
     qInfo() << "MainWindow constructor completed successfully";
 }
 
@@ -791,21 +793,27 @@ void MainWindow::loadSettings()
         
         qInfo() << "About to update UI widgets...";
         qInfo() << "m_autoApplyCheckBox is null:" << (m_autoApplyCheckBox == nullptr);
-        if (m_autoApplyCheckBox) {
+        if (m_autoApplyCheckBox && m_autoApplyCheckBox->isWidgetType()) {
             qInfo() << "Setting autoApplyCheckBox to:" << m_autoApply;
             m_autoApplyCheckBox->setChecked(m_autoApply);
+        } else {
+            qInfo() << "m_autoApplyCheckBox is not a valid widget, skipping";
         }
         
         qInfo() << "m_showOverlayCheckBox is null:" << (m_showOverlayCheckBox == nullptr);
-        if (m_showOverlayCheckBox) {
+        if (m_showOverlayCheckBox && m_showOverlayCheckBox->isWidgetType()) {
             qInfo() << "Setting showOverlayCheckBox to:" << m_showOverlay;
             m_showOverlayCheckBox->setChecked(m_showOverlay);
+        } else {
+            qInfo() << "m_showOverlayCheckBox is not a valid widget, skipping";
         }
         
         qInfo() << "m_overlayTimeoutSpinBox is null:" << (m_overlayTimeoutSpinBox == nullptr);
-        if (m_overlayTimeoutSpinBox) {
+        if (m_overlayTimeoutSpinBox && m_overlayTimeoutSpinBox->isWidgetType()) {
             qInfo() << "Setting overlayTimeoutSpinBox to:" << m_overlayTimeout;
             m_overlayTimeoutSpinBox->setValue(m_overlayTimeout);
+        } else {
+            qInfo() << "m_overlayTimeoutSpinBox is not a valid widget, skipping";
         }
         
         qInfo() << "loadSettings() completed successfully";
