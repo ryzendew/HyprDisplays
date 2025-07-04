@@ -61,17 +61,43 @@ jobs:
         EOF
         chmod +x AppDir/AppRun
         
-        # Download appimagetool and extract it (since FUSE isn't available in CI)
-        wget -c "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
-        chmod +x appimagetool-x86_64.AppImage
+        # Try to use linuxdeployqt for AppImage creation (more reliable in CI)
+        echo "Attempting to use linuxdeployqt for AppImage creation..."
         
-        # Extract the appimagetool to get the binary
-        ./appimagetool-x86_64.AppImage --appimage-extract
-        chmod +x squashfs-root/appimagetool
+        # Download linuxdeployqt
+        wget -c "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
+        chmod +x linuxdeployqt-continuous-x86_64.AppImage
         
-        # Use the extracted appimagetool to create the AppImage
-        echo "Creating AppImage with extracted appimagetool..."
-        ./squashfs-root/appimagetool AppDir HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage
+        # Set up environment for linuxdeployqt
+        export QMAKE=/usr/bin/qmake6
+        export PATH="/usr/lib/x86_64-linux-gnu/qt6/bin:$PATH"
+        
+        # Create AppImage using linuxdeployqt
+        ./linuxdeployqt-continuous-x86_64.AppImage AppDir/usr/share/applications/hyprdisplays.desktop -appimage
+        
+        # Rename the created AppImage
+        if [ -f "HyprDisplays-x86_64.AppImage" ]; then
+            mv HyprDisplays-x86_64.AppImage HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage
+        elif [ -f "hyprdisplays-x86_64.AppImage" ]; then
+            mv hyprdisplays-x86_64.AppImage HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage
+        else
+            echo "Warning: linuxdeployqt did not create expected AppImage, trying fallback method..."
+            
+            # Fallback: Use appimagetool with extraction
+            wget -c "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
+            chmod +x appimagetool-x86_64.AppImage
+            
+            # Try to run appimagetool directly (some CI environments support FUSE)
+            if ./appimagetool-x86_64.AppImage AppDir HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage; then
+                echo "AppImage created successfully with direct appimagetool"
+            else
+                echo "Direct appimagetool failed, trying extraction method..."
+                # Extract and use the binary
+                ./appimagetool-x86_64.AppImage --appimage-extract
+                find squashfs-root -name "*appimagetool*" -type f -exec chmod +x {} \;
+                find squashfs-root -name "*appimagetool*" -type f -exec {} AppDir HyprDisplays-${{ github.event.inputs.version || github.ref_name }}.AppImage \;
+            fi
+        fi
         
         # Verify the AppImage was created
         ls -la *.AppImage
